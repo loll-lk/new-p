@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TASHEEL | Map</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <style>
+        :root {
+            --primary: #0066CC;
+            --primary-dark: #004080;
+            --primary-light: #4D94FF;
+            --card-bg: #ffffff;
+            --card-border: rgba(0, 102, 204, 0.2);
+            --text-main: #003366;
+            --text-muted: #4D6A8F;
+            --bg-gradient-start: #F0F8FF;
+            --bg-gradient-end: #B8D9FF;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: "Segoe UI", system-ui, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .topbar {
+            height: 70px;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border-bottom: 2px solid var(--card-border);
+            z-index: 1000;
+            position: relative;
+        }
+
+        .topbar .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 8px;
+            border-radius: 12px;
+            border: 2px solid var(--primary-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .topbar .logo-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .topbar .title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            color: var(--text-main);
+        }
+
+        .topbar .subtitle {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .spacer {
+            flex: 1;
+        }
+
+        .btn {
+            border: 2px solid var(--primary);
+            background: var(--card-bg);
+            color: var(--primary-dark);
+            border-radius: 14px;
+            padding: 10px 14px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        #map {
+            flex: 1;
+            width: 100%;
+            height: calc(100vh - 70px); 
+            z-index: 1;
+        }
+
+        .hint {
+            position: fixed;
+            left: 20px;
+            bottom: 20px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            border: 2px solid var(--card-border);
+            border-radius: 16px;
+            padding: 12px 14px;
+            max-width: 520px;
+            font-size: 0.9rem;
+            color: var(--text-main);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            z-index: 1000;
+        }
+
+        .hint code {
+            background: rgba(0, 102, 204, 0.08);
+            padding: 2px 6px;
+            border-radius: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .topbar .subtitle {
+                display: none;
+            }
+            
+            .hint {
+                left: 10px;
+                right: 10px;
+                max-width: none;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="logo-icon">
+            <img src="/WhatsApp Image 2026-03-14 at 7.20.08 PM.jpeg" alt="TASHEEL Logo" id="topbar-logo">
+        </div>
+        <div>
+            <div class="title">TASHEEL Map</div>
+            <div class="subtitle">Explore machine locations</div>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn" onclick="goHome()">
+            <i class="fas fa-home" style="margin-right: 5px;"></i> Back to Home
+        </button>
+    </div>
+
+    <div id="map"></div>
+
+    <div class="hint">
+        <div style="font-weight: 800; margin-bottom: 6px;">
+            <i class="fas fa-map-pin" style="color: var(--primary);"></i> Machine Locations
+        </div>
+        <div>
+            Tap on any <strong>marker</strong> to see the location name.
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
+    <script>
+        function goHome() {
+            window.location.href = "/";
+        }
+
+        const egyptBounds = L.latLngBounds(
+            L.latLng(22.0, 24.0), 
+            L.latLng(31.9, 36.95) 
+        );
+
+        const map = L.map("map", {
+            zoomControl: true,
+            attributionControl: true,
+            maxBounds: egyptBounds,
+            maxBoundsViscosity: 1.0
+        });
+
+        map.fitBounds(egyptBounds, { padding: [10, 10] });
+
+        const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 19,
+            minZoom: 6,
+            noWrap: true,
+            bounds: egyptBounds
+        });
+        osm.addTo(map);
+
+        const geocoder = L.Control.Geocoder.nominatim({
+            geocodingQueryParams: {
+                "accept-language": "ar",
+                countrycodes: "eg"
+            }
+        });
+
+        L.Control.geocoder({
+            defaultMarkGeocode: false,
+            geocoder: geocoder,
+            placeholder: "🔍 Search for an area (e.g. Cairo, Giza, Alexandria)…"
+        })
+            .on("markgeocode", function (e) {
+                const bbox = e.geocode.bbox;
+                const bounds = L.latLngBounds(bbox.getSouthEast(), bbox.getNorthWest());
+                map.fitBounds(bounds, { padding: [30, 30] });
+            })
+            .addTo(map);
+
+        
+        var tasheelIcon = L.icon({
+            iconUrl: '/WhatsApp Image 2026-03-14 at 7.20.08 PM.jpeg',  
+            iconSize: [50, 50],      
+            iconAnchor: [25, 50],   
+            popupAnchor: [0, -50]   
+        });
+
+        var machineLocations = [
+            { 
+                name: ' هايبر', 
+                lat: 30.029054, 
+                lng: 31.021765,
+                description: 'موقف هايبر للنقل الجماعي'
+            },
+            { 
+                name: ' وسط البلد', 
+                lat: 30.046694, 
+                lng: 31.236606,
+                description: 'موقف وسط البلد- القاهرة'
+            },
+            { 
+                name: 'مدينه نصر', 
+                lat: 30.064601, 
+                lng: 31.245180,
+                description: 'موقف مدينة نصر '
+            }
+        ];
+
+        machineLocations.forEach(location => {
+            L.marker([location.lat, location.lng], { icon: tasheelIcon })
+                .addTo(map)
+                .bindPopup(`
+                    <div style="text-align: center; direction: rtl;">
+                        <strong style="color: #0066CC; font-size: 1.1rem;">${location.name}</strong>
+                        <br>
+                        <span style="color: #4D6A8F;">${location.description}</span>
+                        <br>
+                        <small style="color: #999;">📍 ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}</small>
+                    </div>
+                `);
+        });
+
+        let customMarker = null;
+        function setCustomMarker(lat, lng) {
+            const p = L.latLng(lat, lng);
+            if (customMarker) {
+                customMarker.setLatLng(p);
+            } else {
+                customMarker = L.marker(p, { icon: tasheelIcon }).addTo(map);
+            }
+            map.setView(p, Math.max(map.getZoom(), 13));
+            return customMarker;
+        }
+
+        window.setCustomMarker = setCustomMarker;
+    </script>
+</body>
+</html>
